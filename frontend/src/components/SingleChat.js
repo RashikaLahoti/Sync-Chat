@@ -20,7 +20,7 @@ import io from "socket.io-client";
 import { ChatState } from "../Context/ChatProvider";
 
 // Note: For Vercel, replace localhost with your deployed backend URL in your .env file
-const ENDPOINT = "http://localhost:5000"; 
+const ENDPOINT = "https://sync-chat-backend-d7bc.onrender.com"; 
 var socket, selectedChatCompare;
 
 const SingleChat = ({ fetchAgain, setFetchAgain }) => {
