@@ -17,7 +17,7 @@ const Signup = () => {
   const [email, setEmail] = useState();
   const [confirmpassword, setConfirmpassword] = useState();
   const [password, setPassword] = useState();
-  const [pic, setPic] = useState();
+  // const [pic, setPic] = useState();
   const [picLoading, setPicLoading] = useState(false);
 
   const submitHandler = async () => {
@@ -43,7 +43,7 @@ const Signup = () => {
       });
       return;
     }
-    console.log(name, email, password, pic);
+    console.log(name, email, password);
     try {
       const config = {
         headers: {
@@ -56,7 +56,7 @@ const Signup = () => {
           name,
           email,
           password,
-          pic,
+          // pic,
         },
         config
       );
