@@ -37,42 +37,51 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     ChatState();
 
   const markAsSeen = useCallback((msg) => {
-  if (!msg?.sender?._id) return;
+    if (!msg?.sender?._id) return;
 
-  if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
-    socket.emit("message seen", { messageId: msg._id, userId: user._id });
-  }
-}, [user]);
+    if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
+      socket.emit("message seen", { messageId: msg._id, userId: user._id });
+    }
+  }, [user]);
 
   const fetchMessages = useCallback(async () => {
-  if (!selectedChat) return;
+    if (!selectedChat) return;
 
-  try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${user.token}`,
-      },
-    };
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      };
 
-    setLoading(true);
+      setLoading(true);
 
-    const { data } = await axios.get(
-      `/api/message/${selectedChat._id}`,
-      config
-    );
+      const { data } = await axios.get(
+        `/api/message/${selectedChat._id}`,
+        config
+      );
 
-    if (isMounted.current) {
-      setMessages(data);
+      if (isMounted.current) {
+        setMessages(data);
+        setLoading(false);
+      }
+
+      socket.emit("join chat", selectedChat._id);
+
+      data.forEach((msg) => markAsSeen(msg));
+    } catch (error) {
       setLoading(false);
+
+      toast({
+        title: "Error Occured!",
+        description: "Failed to Load the Messages",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom",
+      });
     }
-
-    socket.emit("join chat", selectedChat._id);
-
-    data.forEach((msg) => markAsSeen(msg));
-  } catch (error) {
-    setLoading(false);
-  }
-}, [selectedChat, user, markAsSeen]);
+  }, [selectedChat, user, markAsSeen, toast]);
 
   const sendMessage = async (event) => {
     if ((event.type === "click" || event.key === "Enter") && newMessage) {
@@ -127,13 +136,11 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     };
   }, [user]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-  fetchMessages();
-  selectedChatCompare = selectedChat;
-}, [selectedChat, fetchMessages]);
+    fetchMessages();
+    selectedChatCompare = selectedChat;
+  }, [selectedChat, fetchMessages]);
 
-// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     socket.on("message recieved", (newMessageRecieved) => {
       if (
@@ -142,12 +149,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       ) {
         if (!notification.includes(newMessageRecieved)) {
           setNotification([newMessageRecieved, ...notification]);
-
           setFetchAgain(!fetchAgain);
         }
       } else {
         setMessages((prev) => [...prev, newMessageRecieved]);
-
         markAsSeen(newMessageRecieved);
       }
     });
@@ -162,13 +167,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       socket.off("message recieved");
       socket.off("message updated");
     };
-  }, [
-    messages,
-    notification,
-    setNotification,
-    fetchAgain,
-    setFetchAgain,
-  ]);
+  }, [notification, fetchAgain, markAsSeen, setNotification, setFetchAgain]);
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
