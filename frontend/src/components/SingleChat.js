@@ -127,11 +127,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     };
   }, [user]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
   fetchMessages();
   selectedChatCompare = selectedChat;
 }, [selectedChat, fetchMessages]);
 
+// eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     socket.on("message recieved", (newMessageRecieved) => {
       if (
