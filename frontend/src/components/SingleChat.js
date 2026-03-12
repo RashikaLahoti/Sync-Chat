@@ -12,7 +12,7 @@ import {
 } from "@chakra-ui/react";
 
 import { getSender } from "../config/ChatLogics";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 
 import ScrollableChat from "./ScrollableChat";
@@ -36,52 +36,43 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const { selectedChat, user, notification, setNotification } =
     ChatState();
 
-  const markAsSeen = (msg) => {
-    if (!msg?.sender?._id) return;
+  const markAsSeen = useCallback((msg) => {
+  if (!msg?.sender?._id) return;
 
-    if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
-      socket.emit("message seen", { messageId: msg._id, userId: user._id });
-    }
-  };
+  if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
+    socket.emit("message seen", { messageId: msg._id, userId: user._id });
+  }
+}, [user]);
 
-  const fetchMessages = async () => {
-    if (!selectedChat) return;
+  const fetchMessages = useCallback(async () => {
+  if (!selectedChat) return;
 
-    try {
-      const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`,
-        },
-      };
+  try {
+    const config = {
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+      },
+    };
 
-      setLoading(true);
+    setLoading(true);
 
-      const { data } = await axios.get(
-        `/api/message/${selectedChat._id}`,
-        config
-      );
+    const { data } = await axios.get(
+      `/api/message/${selectedChat._id}`,
+      config
+    );
 
-      if (isMounted.current) {
-        setMessages(data);
-        setLoading(false);
-      }
-
-      socket.emit("join chat", selectedChat._id);
-
-      data.forEach((msg) => markAsSeen(msg));
-    } catch (error) {
+    if (isMounted.current) {
+      setMessages(data);
       setLoading(false);
-
-      toast({
-        title: "Error Occured!",
-        description: "Failed to Load the Messages",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-        position: "bottom",
-      });
     }
-  };
+
+    socket.emit("join chat", selectedChat._id);
+
+    data.forEach((msg) => markAsSeen(msg));
+  } catch (error) {
+    setLoading(false);
+  }
+}, [selectedChat, user, markAsSeen]);
 
   const sendMessage = async (event) => {
     if ((event.type === "click" || event.key === "Enter") && newMessage) {
@@ -137,10 +128,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   }, [user]);
 
   useEffect(() => {
-    fetchMessages();
-
-    selectedChatCompare = selectedChat;
-  }, [selectedChat]);
+  fetchMessages();
+  selectedChatCompare = selectedChat;
+}, [selectedChat, fetchMessages]);
 
   useEffect(() => {
     socket.on("message recieved", (newMessageRecieved) => {
