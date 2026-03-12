@@ -6,17 +6,28 @@ const chatRoutes = require("./routes/chatRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 const path = require("path");
+const cors = require("cors");
 
 dotenv.config();
 connectDB();
+
 const app = express();
 
-app.use(express.json()); // to accept json data
+// CORS configuration
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://sync-chat-iota.vercel.app",
+    ],
+    credentials: true,
+  })
+);
 
-// app.get("/", (req, res) => {
-//   res.send("API Running!");
-// });
+// to accept json data
+app.use(express.json());
 
+// API routes
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
@@ -25,18 +36,9 @@ app.use("/api/message", messageRoutes);
 
 const __dirname1 = path.resolve();
 
-//  if (process.env.NODE_ENV === "production") {
-//   // app.use(express.static(path.join(__dirname1, "/frontend/build")));
-
-//   // app.get("*", (req, res) =>
-//   //   res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html")),
-//   // );
-// } else {
-  
-// }
 app.get("/", (req, res) => {
-    res.send("API is running..");
-  });
+  res.send("API is running..");
+});
 
 // --------------------------deployment------------------------------
 
@@ -50,18 +52,24 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on PORT ${PORT}...`);
 });
 
+// --------------------------Socket.io------------------------------
+
 const Message = require("./models/messageModel");
 
 const io = require("socket.io")(server, {
   pingTimeout: 60000,
   cors: {
-    origin: "https://sync-chat-iota.vercel.app",
+    origin: [
+      "http://localhost:3000",
+      "https://sync-chat-iota.vercel.app",
+    ],
     credentials: true,
   },
 });
 
 io.on("connection", (socket) => {
   console.log("Connected to socket.io");
+
   socket.on("setup", (userData) => {
     socket.join(userData._id);
     socket.emit("connected");
@@ -73,7 +81,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", (data) => {
-    // data: { room, user: senderName }
     if (typeof data === "string") {
       socket.in(data).emit("typing");
     } else {
@@ -81,21 +88,26 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("stop typing", (room) => socket.in(room).emit("stop typing"));
+  socket.on("stop typing", (room) => {
+    socket.in(room).emit("stop typing");
+  });
 
   socket.on("new message", async (newMessageRecieved) => {
-    var chat = newMessageRecieved.chat;
+    const chat = newMessageRecieved.chat;
 
     if (!chat.users) return console.log("chat.users not defined");
 
     let statusUpdated = false;
+
     for (const user of chat.users) {
       if (user._id == newMessageRecieved.sender._id) continue;
 
-      // Simple heuristic for delivered: if user is in a room (connected)
       const clients = io.sockets.adapter.rooms.get(user._id);
+
       if (clients && clients.size > 0 && !statusUpdated) {
-        await Message.findByIdAndUpdate(newMessageRecieved._id, { status: "delivered" });
+        await Message.findByIdAndUpdate(newMessageRecieved._id, {
+          status: "delivered",
+        });
         newMessageRecieved.status = "delivered";
         statusUpdated = true;
       }
@@ -111,10 +123,15 @@ io.on("connection", (socket) => {
   socket.on("message seen", async ({ messageId, userId }) => {
     const updatedMessage = await Message.findByIdAndUpdate(
       messageId,
-      { $addToSet: { readBy: userId }, status: "seen" },
+      {
+        $addToSet: { readBy: userId },
+        status: "seen",
+      },
       { new: true }
-    ).populate("sender", "name pic email").populate("chat");
-    
+    )
+      .populate("sender", "name pic email")
+      .populate("chat");
+
     if (updatedMessage && updatedMessage.chat) {
       updatedMessage.chat.users.forEach((user) => {
         socket.in(user._id).emit("message updated", updatedMessage);
@@ -123,7 +140,7 @@ io.on("connection", (socket) => {
   });
 
   socket.on("update message", (updatedMessage) => {
-    var chat = updatedMessage.chat;
+    const chat = updatedMessage.chat;
     if (!chat.users) return;
 
     chat.users.forEach((user) => {
@@ -131,8 +148,7 @@ io.on("connection", (socket) => {
     });
   });
 
-  socket.off("setup", () => {
-    console.log("USER DISCONNECTED");
-    socket.leave(userData._id);
+  socket.on("disconnect", () => {
+    console.log("User disconnected");
   });
 });
