@@ -2,33 +2,22 @@ import { FormControl } from "@chakra-ui/form-control";
 import { Input } from "@chakra-ui/input";
 import { Box, Text } from "@chakra-ui/layout";
 import "./styles.css";
+
 import {
-  IconButton,
   Spinner,
   useToast,
-  useColorModeValue,
   Button,
   InputGroup,
   InputRightElement,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
 } from "@chakra-ui/react";
-import { getSender, getSenderFull } from "../config/ChatLogics";
+
+import { getSender } from "../config/ChatLogics";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import { ArrowBackIcon, HamburgerIcon } from "@chakra-ui/icons";
-import ProfileModal from "./miscellaneous/ProfileModal";
-import ScrollableChat from "./ScrollableChat";
-import Lottie from "react-lottie";
-import animationData from "../animations/typing.json";
 
+import ScrollableChat from "./ScrollableChat";
 import io from "socket.io-client";
-import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
-import GroupMembersModal from "./miscellaneous/GroupMembersModal";
 import { ChatState } from "../Context/ChatProvider";
-import backImg from "../BackImg.png";
 
 const ENDPOINT = "http://localhost:5000";
 var socket, selectedChatCompare;
@@ -39,13 +28,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [newMessage, setNewMessage] = useState("");
   const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
-  const [istyping, setIsTyping] = useState(false);
-  const [typingName, setTypingName] = useState("");
+
   const isMounted = useRef(true);
 
   const toast = useToast();
 
-  const { selectedChat, setSelectedChat, user, notification, setNotification } =
+  const { selectedChat, user, notification, setNotification } =
     ChatState();
 
   const markAsSeen = (msg) => {
@@ -83,6 +71,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       data.forEach((msg) => markAsSeen(msg));
     } catch (error) {
       setLoading(false);
+
       toast({
         title: "Error Occured!",
         description: "Failed to Load the Messages",
@@ -97,6 +86,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const sendMessage = async (event) => {
     if ((event.type === "click" || event.key === "Enter") && newMessage) {
       socket.emit("stop typing", selectedChat._id);
+
       try {
         const config = {
           headers: {
@@ -118,7 +108,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
         socket.emit("new message", data);
 
-        setMessages([...messages, data]);
+        setMessages((prev) => [...prev, data]);
       } catch (error) {
         toast({
           title: "Error Occured!",
@@ -134,17 +124,21 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   useEffect(() => {
     socket = io(ENDPOINT);
+
     socket.emit("setup", user);
+
     socket.on("connected", () => setSocketConnected(true));
 
     return () => {
       isMounted.current = false;
+
       if (socket) socket.disconnect();
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     fetchMessages();
+
     selectedChatCompare = selectedChat;
   }, [selectedChat]);
 
@@ -156,10 +150,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       ) {
         if (!notification.includes(newMessageRecieved)) {
           setNotification([newMessageRecieved, ...notification]);
+
           setFetchAgain(!fetchAgain);
         }
       } else {
         setMessages((prev) => [...prev, newMessageRecieved]);
+
         markAsSeen(newMessageRecieved);
       }
     });
@@ -189,18 +185,22 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
     if (!typing) {
       setTyping(true);
+
       socket.emit("typing", { room: selectedChat._id, user: user.name });
     }
 
     let lastTypingTime = new Date().getTime();
+
     var timerLength = 3000;
 
     setTimeout(() => {
       var timeNow = new Date().getTime();
+
       var timeDiff = timeNow - lastTypingTime;
 
       if (timeDiff >= timerLength && typing) {
         socket.emit("stop typing", selectedChat._id);
+
         setTyping(false);
       }
     }, timerLength);
@@ -242,8 +242,15 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           </FormControl>
         </Box>
       ) : (
-        <Box display="flex" alignItems="center" justifyContent="center" h="100%">
-          <Text fontSize="2xl">Click on a user to start chatting</Text>
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          h="100%"
+        >
+          <Text fontSize="2xl">
+            Click on a user to start chatting
+          </Text>
         </Box>
       )}
     </>
