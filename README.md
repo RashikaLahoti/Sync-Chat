@@ -13,7 +13,7 @@ Uses Socket.io for real time communication and stores user details in encrypted 
   
 ## Demo
 
-[https://sync-chat-iota.vercel.app/](https://sync-chat-backend-d7bc.onrender.com)
+[https://sync-chat-iota.vercel.app/](https://sync-chat-iota.vercel.app/)
 
 ![](./screenshots/main.png)
 ## Run Locally
