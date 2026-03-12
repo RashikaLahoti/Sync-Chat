@@ -44,7 +44,7 @@ const ScrollableChat = ({ messages, setMessages, socket, selectedChat }) => {
         },
       };
       const { data } = await axios.delete(
-        `/api/message/delete/${messageId}`,
+        `https://sync-chat-backend-d7bc.onrender.com/api/message/delete/${messageId}`,
         config,
       );
       setMessages(messages.map((m) => (m._id === messageId ? data : m)));
@@ -70,7 +70,7 @@ const ScrollableChat = ({ messages, setMessages, socket, selectedChat }) => {
         },
       };
       const { data } = await axios.put(
-        "/api/message/edit",
+        "https://sync-chat-backend-d7bc.onrender.com/api/message/edit",
         { messageId, content: editContent },
         config,
       );
@@ -96,7 +96,7 @@ const ScrollableChat = ({ messages, setMessages, socket, selectedChat }) => {
         },
       };
       const { data } = await axios.put(
-        "/api/message/react",
+        "https://sync-chat-backend-d7bc.onrender.com/api/message/react",
         { messageId, emoji },
         config,
       );
