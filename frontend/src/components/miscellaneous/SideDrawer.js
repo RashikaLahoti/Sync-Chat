@@ -21,6 +21,7 @@ import {
   IconButton,
   Spinner,
   useToast,
+  Badge,
 } from "@chakra-ui/react";
 import { BellIcon, ChevronDownIcon, MoonIcon, SunIcon } from "@chakra-ui/icons";
 import { useHistory } from "react-router-dom";
@@ -28,8 +29,6 @@ import { useState } from "react";
 import axios from "axios";
 import ChatLoading from "../ChatLoading";
 import ProfileModal from "./ProfileModal";
-import NotificationBadge from "react-notification-badge";
-import { Effect } from "react-notification-badge";
 import { getSender } from "../../config/ChatLogics";
 import UserListItem from "../userAvatar/UserListItem";
 import { ChatState } from "../../Context/ChatProvider";
@@ -151,7 +150,13 @@ function SideDrawer() {
         <Text fontSize="2xl" fontFamily="Work sans" fontWeight="bold">
           Sync-Chat
         </Text>
-        <Box display="flex" alignItems="center" zIndex={10} minW="150px" justifyContent="flex-end">
+        <Box
+          display="flex"
+          alignItems="center"
+          zIndex={10}
+          minW="150px"
+          justifyContent="flex-end"
+        >
           <IconButton
             display="flex"
             variant="ghost"
@@ -164,11 +169,21 @@ function SideDrawer() {
           />
           <Menu>
             <MenuButton p={1}>
-              <NotificationBadge
-                count={notification.length}
-                effect={Effect.SCALE}
-              />
-              <BellIcon fontSize="2xl" m={1} />
+              <Box position="relative" display="inline-block">
+                <BellIcon fontSize="2xl" m={1} />
+                {notification.length > 0 && (
+                  <Badge
+                    colorScheme="red"
+                    borderRadius="full"
+                    position="absolute"
+                    top="-2px"
+                    right="-2px"
+                    fontSize="0.7em"
+                  >
+                    {notification.length}
+                  </Badge>
+                )}
+              </Box>
             </MenuButton>
             <MenuList pl={2}>
               {!notification.length && "No New Messages"}

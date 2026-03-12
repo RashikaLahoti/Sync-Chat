@@ -1,7 +1,7 @@
 
-# Talk-A-Tive
+# Sync-Chat
 
-Talk-a-tive is a Full Stack Chatting App.
+Sync-Chat is a Full Stack Chatting App.
 Uses Socket.io for real time communication and stores user details in encrypted format in Mongo DB Database.
 ## Tech Stack
 
@@ -21,13 +21,13 @@ Uses Socket.io for real time communication and stores user details in encrypted 
 Clone the project
 
 ```bash
-  git clone https://github.com/piyush-eon/mern-chat-app
+  git clone https://github.com/RashikaLahoti/Sync-Chat.git
 ```
 
 Go to the project directory
 
 ```bash
-  cd mern-chat-app
+  cd Sync-Chat
 ```
 
 Install dependencies
@@ -58,24 +58,22 @@ Start the Client
 # Features
 
 ### Authenticaton
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/login.PNG)
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/signup.PNG)
+![](./screenshots/login%20(2).png)
+![](./screenshots/signup%20(2).png)
 ### Real Time Chatting with Typing indicators
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/real-time.PNG)
+![](./screenshots/real-time%20(2).png)
 ### One to One chat
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/mainscreen.PNG)
+![](./screenshots/mainscreen%20(2).png)
+### Light Theme
+![](./screenshots/lighttheme.png)
 ### Search Users
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/search.PNG)
+![](./screenshots/mainscreen%20(2).png)
 ### Create Group Chats
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/new%20grp.PNG)
-### Notifications 
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/group%20%2B%20notif.PNG)
-### Add or Remove users from group
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/add%20rem.PNG)
-### View Other user Profile
-![](https://github.com/piyush-eon/mern-chat-app/blob/master/screenshots/profile.PNG)
+![](./screenshots/groupchat.png)
+
+
 ## Made By
 
-- [@Piyush-eon](https://github.com/piyush-eon)
+- [@RashikaLahoti](https://github.com/RashikaLahoti)
 
   
