@@ -1,3 +1,4 @@
+
 import { FormControl } from "@chakra-ui/form-control";
 import { Input } from "@chakra-ui/input";
 import { Box, Text } from "@chakra-ui/layout";
@@ -30,19 +31,20 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [typing, setTyping] = useState(false);
 
   const isMounted = useRef(true);
-
   const toast = useToast();
 
-  const { selectedChat, user, notification, setNotification } =
-    ChatState();
+  const { selectedChat, user, notification, setNotification } = ChatState();
 
-  const markAsSeen = useCallback((msg) => {
-    if (!msg?.sender?._id) return;
+  const markAsSeen = useCallback(
+    (msg) => {
+      if (!msg?.sender?._id) return;
 
-    if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
-      socket.emit("message seen", { messageId: msg._id, userId: user._id });
-    }
-  }, [user]);
+      if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
+        socket.emit("message seen", { messageId: msg._id, userId: user._id });
+      }
+    },
+    [user]
+  );
 
   const fetchMessages = useCallback(async () => {
     if (!selectedChat) return;
@@ -124,14 +126,12 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
   useEffect(() => {
     socket = io(ENDPOINT);
-
     socket.emit("setup", user);
 
     socket.on("connected", () => setSocketConnected(true));
 
     return () => {
       isMounted.current = false;
-
       if (socket) socket.disconnect();
     };
   }, [user]);
@@ -141,6 +141,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     selectedChatCompare = selectedChat;
   }, [selectedChat, fetchMessages]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     socket.on("message recieved", (newMessageRecieved) => {
       if (
@@ -167,7 +168,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
       socket.off("message recieved");
       socket.off("message updated");
     };
-  }, [notification, fetchAgain, markAsSeen, setNotification, setFetchAgain]);
+  }, []);
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
@@ -176,22 +177,18 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
     if (!typing) {
       setTyping(true);
-
       socket.emit("typing", { room: selectedChat._id, user: user.name });
     }
 
     let lastTypingTime = new Date().getTime();
-
     var timerLength = 3000;
 
     setTimeout(() => {
       var timeNow = new Date().getTime();
-
       var timeDiff = timeNow - lastTypingTime;
 
       if (timeDiff >= timerLength && typing) {
         socket.emit("stop typing", selectedChat._id);
-
         setTyping(false);
       }
     }, timerLength);
@@ -233,15 +230,8 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           </FormControl>
         </Box>
       ) : (
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          h="100%"
-        >
-          <Text fontSize="2xl">
-            Click on a user to start chatting
-          </Text>
+        <Box display="flex" alignItems="center" justifyContent="center" h="100%">
+          <Text fontSize="2xl">Click on a user to start chatting</Text>
         </Box>
       )}
     </>
