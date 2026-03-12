@@ -18,7 +18,7 @@ const userSchema = mongoose.Schema(
       default: false,
     },
   },
-  { timestaps: true }
+  { timestaps: true },
 );
 
 userSchema.methods.matchPassword = async function (enteredPassword) {

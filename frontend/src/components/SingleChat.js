@@ -2,9 +2,21 @@ import { FormControl } from "@chakra-ui/form-control";
 import { Input } from "@chakra-ui/input";
 import { Box, Text } from "@chakra-ui/layout";
 import "./styles.css";
-import { IconButton, Spinner, useToast, useColorModeValue, Button, InputGroup, InputRightElement, Menu, MenuButton, MenuList, MenuItem } from "@chakra-ui/react";
+import {
+  IconButton,
+  Spinner,
+  useToast,
+  useColorModeValue,
+  Button,
+  InputGroup,
+  InputRightElement,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+} from "@chakra-ui/react";
 import { getSender, getSenderFull } from "../config/ChatLogics";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { ArrowBackIcon, HamburgerIcon } from "@chakra-ui/icons";
 import ProfileModal from "./miscellaneous/ProfileModal";
@@ -14,7 +26,9 @@ import animationData from "../animations/typing.json";
 
 import io from "socket.io-client";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
+import GroupMembersModal from "./miscellaneous/GroupMembersModal";
 import { ChatState } from "../Context/ChatProvider";
+import backImg from "../BackImg.png";
 const ENDPOINT = "http://localhost:5000"; // "https://talk-a-tive.herokuapp.com"; -> After deployment
 var socket, selectedChatCompare;
 
@@ -25,12 +39,15 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   const [socketConnected, setSocketConnected] = useState(false);
   const [typing, setTyping] = useState(false);
   const [istyping, setIsTyping] = useState(false);
+  const [typingName, setTypingName] = useState("");
+  const isMounted = useRef(true);
   const toast = useToast();
   const boxBg = useColorModeValue("#E8E8E8", "gray.800");
   const boxColor = useColorModeValue("black", "white");
   const inputBg = useColorModeValue("#E0E0E0", "gray.700");
   const backBtnBg = useColorModeValue("gray.200", "gray.600");
   const backBtnHoverBg = useColorModeValue("gray.300", "gray.500");
+  const chatBgImage = useColorModeValue("none", `url(${backImg})`);
 
   const defaultOptions = {
     loop: true,
@@ -42,6 +59,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
   };
   const { selectedChat, setSelectedChat, user, notification, setNotification } =
     ChatState();
+
+  const markAsSeen = (msg) => {
+  if (!msg?.sender?._id) return;
+
+  if (msg.sender._id !== user._id && !msg?.readBy?.includes(user._id)) {
+    socket.emit("message seen", { messageId: msg._id, userId: user._id });
+  }
+};
 
   const fetchMessages = async () => {
     if (!selectedChat) return;
@@ -57,26 +82,38 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
       const { data } = await axios.get(
         `/api/message/${selectedChat._id}`,
-        config
+        config,
       );
-      setMessages(data);
-      setLoading(false);
+      if (isMounted.current) {
+        setMessages(data);
+        setLoading(false);
+      }
 
       socket.emit("join chat", selectedChat._id);
+
+      // Mark unread messages as seen
+      data.forEach((msg) => markAsSeen(msg));
     } catch (error) {
-      toast({
-        title: "Error Occured!",
-        description: "Failed to Load the Messages",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-        position: "bottom",
-      });
-    }
+  console.log("FULL ERROR:", error);
+  console.log("ERROR RESPONSE:", error.response);
+  console.log("ERROR DATA:", error.response?.data);
+
+  if (isMounted.current) {
+    setLoading(false);
+    toast({
+      title: "Error Occured!",
+      description: "Failed to Load the Messages",
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+      position: "bottom",
+    });
+  }
+}
   };
 
   const sendMessage = async (event) => {
-    if ((event.type === "click" || (event.key === "Enter")) && newMessage) {
+    if ((event.type === "click" || event.key === "Enter") && newMessage) {
       socket.emit("stop typing", selectedChat._id);
       try {
         const config = {
@@ -90,9 +127,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           "/api/message",
           {
             content: newMessage,
-            chatId: selectedChat,
+            chatId: selectedChat._id,
           },
-          config
+          config,
         );
         socket.emit("new message", data);
         setMessages([...messages, data]);
@@ -116,10 +153,14 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
           Authorization: `Bearer ${user.token}`,
         },
       };
-      setLoading(true);
+      if (isMounted.current) {
+        setLoading(true);
+      }
       await axios.delete(`/api/message/${selectedChat._id}`, config);
-      setMessages([]);
-      setLoading(false);
+      if (isMounted.current) {
+        setMessages([]);
+        setLoading(false);
+      }
       setFetchAgain(!fetchAgain);
       toast({
         title: "Chat Cleared",
@@ -137,7 +178,9 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         isClosable: true,
         position: "bottom",
       });
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -145,9 +188,27 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
     socket = io(ENDPOINT);
     socket.emit("setup", user);
     socket.on("connected", () => setSocketConnected(true));
-    socket.on("typing", () => setIsTyping(true));
-    socket.on("stop typing", () => setIsTyping(false));
+    socket.on("typing", (name) => {
+      setTypingName(name || "");
+      setIsTyping(true);
+      if (isMounted.current) {
+        setTypingName(name || "");
+        setIsTyping(true);
+      }
+    });
+    socket.on("stop typing", () => {
+      if (isMounted.current) {
+        setIsTyping(false);
+        setTypingName("");
+      }
+    });
 
+    return () => {
+      isMounted.current = false; // Cleanup for isMounted ref
+      if (socket) {
+        socket.disconnect();
+      }
+    };
     // eslint-disable-next-line
   }, []);
 
@@ -170,9 +231,21 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         }
       } else {
         setMessages([...messages, newMessageRecieved]);
+        markAsSeen(newMessageRecieved);
       }
     });
-  });
+
+    socket.on("message updated", (updatedMessage) => {
+      setMessages((prev) =>
+        prev.map((m) => (m._id === updatedMessage._id ? updatedMessage : m)),
+      );
+    });
+
+    return () => {
+      socket.off("message recieved");
+      socket.off("message updated");
+    };
+  }, [messages]);
 
   const typingHandler = (e) => {
     setNewMessage(e.target.value);
@@ -181,7 +254,7 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
 
     if (!typing) {
       setTyping(true);
-      socket.emit("typing", selectedChat._id);
+      socket.emit("typing", { room: selectedChat._id, user: user.name });
     }
     let lastTypingTime = new Date().getTime();
     var timerLength = 3000;
@@ -221,14 +294,16 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                 _hover={{ bg: backBtnHoverBg }}
                 color={boxColor}
               />
-              {!selectedChat.isGroupChat 
-                ? getSender(user, selectedChat.users) 
+              {!selectedChat.isGroupChat
+                ? getSender(user, selectedChat.users)
                 : selectedChat.chatName}
             </Box>
             <Box display="flex">
               {messages &&
                 (!selectedChat.isGroupChat ? (
-                  <ProfileModal user={getSenderFull(user, selectedChat.users)} />
+                  <ProfileModal
+                    user={getSenderFull(user, selectedChat.users)}
+                  />
                 ) : (
                   <UpdateGroupChatModal
                     fetchMessages={fetchMessages}
@@ -245,8 +320,25 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
                   ml={1}
                   color={boxColor}
                 />
-                <MenuList color="black">
-                  <MenuItem onClick={clearChat}>Clear Conversation</MenuItem>
+                <MenuList color={boxColor}>
+                  {selectedChat.isGroupChat && (
+                    <GroupMembersModal
+                      users={selectedChat.users}
+                      chatName={selectedChat.chatName}
+                      admin={selectedChat.groupAdmin}
+                    >
+                      <MenuItem fontSize="md" fontWeight="semibold">
+                        See all members
+                      </MenuItem>
+                    </GroupMembersModal>
+                  )}
+                  <MenuItem
+                    fontSize="md"
+                    fontWeight="semibold"
+                    onClick={clearChat}
+                  >
+                    Clear Conversation
+                  </MenuItem>
                 </MenuList>
               </Menu>
             </Box>
@@ -257,6 +349,10 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
             justifyContent="flex-end"
             p={3}
             bg={boxBg}
+            backgroundImage={chatBgImage}
+            backgroundSize="cover"
+            backgroundPosition="center"
+            backgroundRepeat="no-repeat"
             color={boxColor}
             w="100%"
             h="100%"
@@ -273,22 +369,38 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
               />
             ) : (
               <div className="messages">
-                <ScrollableChat messages={messages} selectedChat={selectedChat} />
+                <ScrollableChat
+                  messages={messages}
+                  setMessages={setMessages}
+                  socket={socket}
+                  selectedChat={selectedChat}
+                />
               </div>
             )}
 
-            <FormControl
-              id="first-name"
-              isRequired
-              mt={3}
-            >
+            <FormControl id="first-name" isRequired mt={3}>
               {istyping ? (
-                <div>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <Text
+                    fontSize="xs"
+                    color="gray.500"
+                    fontStyle="italic"
+                    mr={2}
+                  >
+                    {selectedChat.isGroupChat && typingName
+                      ? `${typingName} is typing...`
+                      : "Typing..."}
+                  </Text>
                   <Lottie
                     options={defaultOptions}
-                    // height={50}
-                    width={70}
-                    style={{ marginBottom: 15, marginLeft: 0 }}
+                    width={50}
+                    style={{ marginLeft: 0, marginButton: 0 }}
                   />
                 </div>
               ) : (
@@ -319,8 +431,13 @@ const SingleChat = ({ fetchAgain, setFetchAgain }) => {
         </>
       ) : (
         // to get socket.io on same page
-        <Box display="flex" alignItems="center" justifyContent="center" h="100%">
-          <Text fontSize="3xl" pb={3} fontFamily="Work sans">
+        <Box
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          h="100%"
+        >
+          <Text fontSize="2xl" pb={3} fontFamily="Work sans">
             Click on a user to start chatting
           </Text>
         </Box>
